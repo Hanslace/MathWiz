@@ -1,103 +1,104 @@
-import Image from "next/image";
+// app/page.tsx
+'use client';
 
-export default function Home() {
+import Link from 'next/link';
+import Image from 'next/image';
+
+import { useRef } from 'react';
+
+
+const APPS = [
+  'Calculation',
+  'Grapher',
+  'Equations',
+  'Statistics',
+  'Regression',
+  'Sequences',
+  'Distributions',
+  'Inference',
+  'Finance',
+  'Elements',
+  'Python',
+  'Settings',
+];
+
+export default function Page() {
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+    <main className="app-shell flex min-h-[100dvh] items-center justify-center bg-[var(--background)] text-[var(--foreground)]">
+      <div className="flex min-h-[100dvh] w-full max-w-[1440px] flex-col items-center gap-6 px-4 py-6">
+        {/* Header pill */}
+        <div className="flex h-[72px] w-full max-w-[850px] items-center justify-center rounded-[50px] bg-[linear-gradient(180deg,#FF69B4_54.81%,rgba(255,105,180,0.7)_100%)] opacity-90 shadow-[0_4px_4px_rgba(0,0,0,0.25)]">
+          <span className="font-[400] text-[28px] leading-[36px] text-white drop-shadow-[0_4px_4px_rgba(0,0,0,0.25)] md:text-[32px] md:leading-[40px]">
+            Math Wiz
+          </span>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+
+        {/* Main area */}
+        <div className="flex w-full max-w-[1000px] flex-1 items-center gap-3">
+          {/* Scrollable light gray container */}
+          <div
+            ref={scrollRef}
+            className="
+              relative
+              h-full min-h-[320px] max-h-[70vh]
+              w-full
+              overflow-y-auto
+              rounded-[40px]
+              bg-[rgba(217,217,217,0.5)]
+              no-scrollbar
+            "
+          >
+            <div className="grid h-full w-full grid-cols-3 gap-6 p-8">
+              {APPS.map((name) => {
+                ;
+                return (
+                  <Link
+                    key={name}
+                    href={`/${name}`}
+                    className="
+                      group
+                      mx-auto
+                      flex max-h-full max-w-full flex-col
+                      rounded-[25px]
+                      bg-[#FFFFFF]
+                      shadow-[0_4px_12px_rgba(0,0,0,0.08)]
+                      transition-transform
+                      hover:-translate-y-1
+                      active:scale-[0.97]
+                      overflow-hidden
+                    "
+                  >
+                    {/* Image block */}
+                    <div className="relative h-[170px] w-[170px] overflow-hidden bg-[#f7f0f6] rounded-[25px] shadow-[0_6px_14px_rgba(0,0,0,0.16)]">
+                      <Image
+                        src={`/${name}.png`} // put your files in public/apps/<id>.png
+                        alt={name}
+                        fill
+                        className="object-cover"
+                        sizes="170px"
+                      />
+                    </div>
+
+                    {/* Title at bottom */}
+                    <div className="px-3 py-1 text-center">
+                      <span className="block text-[20px] font-semibold tracking-tight text-[#333] group-hover:text-[#FF69B4]">
+                        {name}
+                      </span>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* Footer / trademark */}
+        <div className="text-[11px] font-medium tracking-tight text-[rgba(0,0,0,0.55)]">
+          © 2025 — All rights belong to the dumbasses.
+        </div>
+      </div>
+    </main>
   );
 }
