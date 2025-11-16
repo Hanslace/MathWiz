@@ -63,8 +63,6 @@ export type EquationsState = {
 
 
 
-export type AlphaMode = 'off' | 'lower' | 'upper';
-
 export type CoreState = {
   settings: Settings;
 

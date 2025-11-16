@@ -9,7 +9,6 @@ import type {
   GrapherView,
   GrapherEquation,
 
-  AlphaMode
 } from './coreTypes';
 
 // Simple ID helper

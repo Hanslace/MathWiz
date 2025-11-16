@@ -2,7 +2,13 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { create, all } from 'mathjs';
+import {
+  create,
+  all,
+  type MathType,
+  type Complex,
+  type Unit,
+} from 'mathjs';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
   addGrapherEquation,
@@ -36,7 +42,7 @@ const COLOR_PALETTE = ['#ff4b8b', '#007aff', '#34c759', '#ff9500', '#af52de'];
 
 // ---------- helpers ----------
 
-function niceStep(range: number) {
+function niceStep(range: number): number {
   const raw = range / 10;
   const pow10 = Math.pow(10, Math.floor(Math.log10(raw) || 0));
   const f = raw / pow10;
@@ -57,12 +63,15 @@ function formatTick(v: number): string {
   return parseFloat(v.toFixed(4)).toString();
 }
 
-function toRadians(x: any, angleMode: AngleMode): number {
+function toRadians(
+  x: number | Unit | MathType,
+  angleMode: AngleMode,
+): number {
   if (math.typeOf(x) === 'Unit') {
-    return (x as any).toNumber('rad');
+    return (x as Unit).toNumber('rad');
   }
 
-  const n = typeof x === 'number' ? x : Number(x);
+  const n = typeof x === 'number' ? x : Number(x as number | string | bigint);
   if (Number.isNaN(n)) return NaN;
 
   if (angleMode === 'rad') return n;
@@ -71,24 +80,38 @@ function toRadians(x: any, angleMode: AngleMode): number {
 }
 
 // evaluate expr at x, honoring angleMode
-function evalAt(expr: string, xVal: number, angleMode: AngleMode): number | null {
+function evalAt(
+  expr: string,
+  xVal: number,
+  angleMode: AngleMode,
+): number | null {
   try {
-    const scope: any = {
+    const scope: Record<
+      string,
+      number | ((x: number | Unit | MathType) => number)
+    > = {
       x: xVal,
-      sin: (x: any) => math.sin(toRadians(x, angleMode)),
-      cos: (x: any) => math.cos(toRadians(x, angleMode)),
-      tan: (x: any) => math.tan(toRadians(x, angleMode)),
-      asin: (x: any) => math.asin(x),
-      acos: (x: any) => math.acos(x),
-      atan: (x: any) => math.atan(x),
+      sin: (xArg) => math.sin(toRadians(xArg, angleMode)) as number,
+      cos: (xArg) => math.cos(toRadians(xArg, angleMode)) as number,
+      tan: (xArg) => math.tan(toRadians(xArg, angleMode)) as number,
+      asin: (xArg) => math.asin(xArg as number) as number,
+      acos: (xArg) => math.acos(xArg as number) as number,
+      atan: (xArg) => math.atan(xArg as number) as number,
     };
 
-    const v = math.evaluate(expr, scope);
+    const v = math.evaluate(expr, scope) as MathType;
+
     if (math.isComplex(v)) {
-      const re = (v as any).re as number;
+      const complex = v as Complex;
+      const re = complex.re as number;
       return Number.isFinite(re) ? re : null;
     }
-    const n = typeof v === 'number' ? v : Number(v);
+
+    if (typeof v === 'number') {
+      return Number.isFinite(v) ? v : null;
+    }
+
+    const n = Number(v as number | string | bigint);
     return Number.isFinite(n) ? n : null;
   } catch {
     return null;
@@ -110,7 +133,7 @@ export default function GrapherPage() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
-  const [toolOpen, setToolOpen] = useState(false);
+  const [toolOpen, setToolOpen] = useState<boolean>(false);
   const [activeEquationId, setActiveEquationId] = useState<string | null>(null);
   const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
@@ -130,8 +153,8 @@ export default function GrapherPage() {
 
     canvas.width = width * dpr;
     canvas.height = height * dpr;
-    canvas.style.width = width + 'px';
-    canvas.style.height = height + 'px';
+    canvas.style.width = `${width}px`;
+    canvas.style.height = `${height}px`;
 
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, width, height);
@@ -143,9 +166,9 @@ export default function GrapherPage() {
     const plotW = width - padding * 2;
     const plotH = height - padding * 2;
 
-    const xToPx = (x: number) =>
+    const xToPx = (x: number): number =>
       padding + ((x - xMin) / (xMax - xMin)) * plotW;
-    const yToPx = (y: number) =>
+    const yToPx = (y: number): number =>
       height - padding - ((y - yMin) / (yMax - yMin)) * plotH;
 
     // background
@@ -208,7 +231,8 @@ export default function GrapherPage() {
       }
 
       ctx.fillStyle = '#333';
-      ctx.font = '11px system-ui, -apple-system, BlinkMacSystemFont, sans-serif';
+      ctx.font =
+        '11px system-ui, -apple-system, BlinkMacSystemFont, sans-serif';
 
       // x axis letter
       const xLabelY =
@@ -230,7 +254,8 @@ export default function GrapherPage() {
           xAxisY !== null ? xAxisY : height - padding;
         ctx.strokeStyle = '#444';
         ctx.fillStyle = '#555';
-        ctx.font = '10px system-ui, -apple-system, BlinkMacSystemFont, sans-serif';
+        ctx.font =
+          '10px system-ui, -apple-system, BlinkMacSystemFont, sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
 
@@ -255,7 +280,8 @@ export default function GrapherPage() {
           yAxisX !== null ? yAxisX : padding;
         ctx.strokeStyle = '#444';
         ctx.fillStyle = '#555';
-        ctx.font = '10px system-ui, -apple-system, BlinkMacSystemFont, sans-serif';
+        ctx.font =
+          '10px system-ui, -apple-system, BlinkMacSystemFont, sans-serif';
         ctx.textAlign = 'right';
         ctx.textBaseline = 'middle';
 
@@ -311,15 +337,18 @@ export default function GrapherPage() {
 
   // ---------- handlers using store ----------
 
-  const updateView = (patch: Partial<GrapherView>) => {
+  const updateView = (patch: Partial<GrapherView>): void => {
     dispatch(setGrapherView(patch));
   };
 
-  const updateEquation = (id: string, patch: Partial<GrapherEquation>) => {
+  const updateEquation = (
+    id: string,
+    patch: Partial<GrapherEquation>,
+  ): void => {
     dispatch(updateGrapherEquation({ id, patch }));
   };
 
-  const addEquation = () => {
+  const addEquation = (): void => {
     const idx = equations.length % COLOR_PALETTE.length;
     dispatch(
       addGrapherEquation({
@@ -329,7 +358,7 @@ export default function GrapherPage() {
     );
   };
 
-  const zoom = (factor: number) => {
+  const zoom = (factor: number): void => {
     const { xMin, xMax, yMin, yMax } = view;
     const cx = (xMin + xMax) / 2;
     const cy = (yMin + yMax) / 2;
@@ -345,7 +374,7 @@ export default function GrapherPage() {
     });
   };
 
-  const resetView = () => {
+  const resetView = (): void => {
     updateView({
       xMin: -10,
       xMax: 10,
@@ -358,7 +387,7 @@ export default function GrapherPage() {
 
   // ---------- toolbox insertion for equations (inline in sidebar) ----------
 
-  const insertSnippet = (snippet: string, cursorOffset: number) => {
+  const insertSnippet = (snippet: string, cursorOffset: number): void => {
     if (!activeEquationId) return;
     const el = inputRefs.current[activeEquationId];
     const eq = equations.find((e) => e.id === activeEquationId);
@@ -448,7 +477,9 @@ export default function GrapherPage() {
                   <input
                     type="checkbox"
                     checked={view.showGrid}
-                    onChange={(e) => updateView({ showGrid: e.target.checked })}
+                    onChange={(e) =>
+                      updateView({ showGrid: e.target.checked })
+                    }
                   />
                   Grid
                 </label>
@@ -456,7 +487,9 @@ export default function GrapherPage() {
                   <input
                     type="checkbox"
                     checked={view.showAxes}
-                    onChange={(e) => updateView({ showAxes: e.target.checked })}
+                    onChange={(e) =>
+                      updateView({ showAxes: e.target.checked })
+                    }
                   />
                   Axes
                 </label>
@@ -537,7 +570,9 @@ export default function GrapherPage() {
                     <input
                       type="color"
                       className="func-color"
-                      value={eq.color || COLOR_PALETTE[idx % COLOR_PALETTE.length]}
+                      value={
+                        eq.color || COLOR_PALETTE[idx % COLOR_PALETTE.length]
+                      }
                       onChange={(e) =>
                         updateEquation(eq.id, { color: e.target.value })
                       }

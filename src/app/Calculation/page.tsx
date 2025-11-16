@@ -2,7 +2,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { create, all } from 'mathjs';
+import { create, all, type MathType, type Complex, type Unit } from 'mathjs';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
   setCalculationInput,
@@ -18,14 +18,30 @@ const math = create(all, {});
 const ANGLE_MODES: AngleMode[] = ['deg', 'rad', 'grad'];
 const COMPLEX_MODES: ComplexMode[] = ['a+bi', 'r∠θ'];
 
+type TrigArg = MathType;
+type TrigFn = (x: TrigArg) => number;
+
+type TrigScope = {
+  sin: TrigFn;
+  cos: TrigFn;
+  tan: TrigFn;
+  asin: TrigFn;
+  acos: TrigFn;
+  atan: TrigFn;
+};
+
 // ---------- helpers using settings ----------
 
-function toRadians(x: any, angleMode: AngleMode): number {
+function toRadians(x: MathType, angleMode: AngleMode): number {
   if (math.typeOf(x) === 'Unit') {
-    return (x as any).toNumber('rad');
+    return (x as Unit).toNumber('rad');
   }
 
-  const n = typeof x === 'number' ? x : Number(x);
+  const n =
+    typeof x === 'number'
+      ? x
+      : Number(x);
+
   if (Number.isNaN(n)) return NaN;
 
   if (angleMode === 'rad') return n;
@@ -39,31 +55,31 @@ function fromRadians(v: number, angleMode: AngleMode): number {
   return (v * 200) / Math.PI; // grad
 }
 
-function evalWithSettings(expr: string, angleMode: AngleMode) {
-  const scope = {
-    sin: (x: any) => math.sin(toRadians(x, angleMode)),
-    cos: (x: any) => math.cos(toRadians(x, angleMode)),
-    tan: (x: any) => math.tan(toRadians(x, angleMode)),
-    asin: (x: any) => fromRadians(math.asin(x) as number, angleMode),
-    acos: (x: any) => fromRadians(math.acos(x) as number, angleMode),
-    atan: (x: any) => fromRadians(math.atan(x) as number, angleMode),
+function evalWithSettings(expr: string, angleMode: AngleMode): MathType {
+  const scope: TrigScope = {
+    sin: (x) => math.sin(toRadians(x, angleMode)) as number,
+    cos: (x) => math.cos(toRadians(x, angleMode)) as number,
+    tan: (x) => math.tan(toRadians(x, angleMode)) as number,
+    asin: (x) => fromRadians(math.asin(x as number) as number, angleMode),
+    acos: (x) => fromRadians(math.acos(x as number) as number, angleMode),
+    atan: (x) => fromRadians(math.atan(x as number) as number, angleMode),
   };
 
-  return math.evaluate(expr, scope);
+  return math.evaluate(expr, scope) as MathType;
 }
 
-function formatNumber(x: number) {
+function formatNumber(x: number): string {
   if (Math.abs(x) < 1e-12) return '0';
   return math.format(x, { precision: 8 });
 }
 
 function formatResultWithSettings(
-  value: any,
+  value: MathType,
   angleMode: AngleMode,
   complexMode: ComplexMode,
 ): string {
   if (math.isComplex(value)) {
-    const z = value as any;
+    const z = value as Complex;
     if (complexMode === 'a+bi') {
       const re = z.re as number;
       const im = z.im as number;

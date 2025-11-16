@@ -2,7 +2,13 @@
 'use client';
 
 import { useEffect } from 'react';
-import { create, all } from 'mathjs';
+import {
+  create,
+  all,
+  type MathNode,
+  type Matrix,
+  type MathType,
+} from 'mathjs';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
   setEquationsMode,
@@ -14,14 +20,50 @@ import {
 
 const math = create(all, {});
 
+// ---------- small helpers ----------
+
+type VarName = 'x' | 'y' | 'z' | 't';
+
+type EquationNode = {
+  eqStr: string;
+  exprStr: string;
+  node: MathNode;
+};
+
+type MaybeSymbolNode = MathNode & {
+  isSymbolNode?: boolean;
+  name?: string;
+};
+
+function toNumberArray(value: MathType): number[] {
+  if (Array.isArray(value)) {
+    return (value as (number | string | bigint)[]).map((v) => Number(v));
+  }
+
+  if (math.typeOf(value) === 'Matrix') {
+    const arr = (value as Matrix).toArray() as (number | string | bigint)[];
+    return arr.map((v) => Number(v));
+  }
+
+  return [Number(value as number | string | bigint)];
+}
+
+function formatNumber(v: number): string {
+  if (!Number.isFinite(v)) return String(v);
+  if (Math.abs(v) < 1e-12) return '0';
+  return Number(v.toFixed(8)).toString();
+}
+
 // ---------- helpers: linear system ----------
 
 function solveLinearSystem(system: string[]): string {
   const raw = system.map((s) => s.trim()).filter((s) => s.length > 0);
-  if (raw.length === 0) return 'Enter at least one equation (e.g. 2x + 3y = 5).';
+  if (raw.length === 0) {
+    return 'Enter at least one equation (e.g. 2x + 3y = 5).';
+  }
 
   try {
-    const eqNodes = raw.map((eqStr) => {
+    const eqNodes: EquationNode[] = raw.map((eqStr) => {
       const parts = eqStr.split('=');
       let exprStr: string;
       if (parts.length === 1) {
@@ -29,20 +71,26 @@ function solveLinearSystem(system: string[]): string {
       } else {
         const lhs = parts[0];
         const rhs = parts.slice(1).join('='); // keep any extra '=' in RHS
-        exprStr = `(${lhs}) - (${rhs})`; // move to LHS: lhs - rhs = 0
+        exprStr = `(${lhs}) - (${rhs})`;
       }
-      const node = math.parse(exprStr);
+      const node = math.parse(exprStr) as MathNode;
       return { eqStr, node, exprStr };
     });
 
-    const candidateVars = ['x', 'y', 'z', 't'];
+    const candidateVars: VarName[] = ['x', 'y', 'z', 't'];
     const varSet = new Set<string>();
 
     eqNodes.forEach(({ node }) => {
-      const syms =
-        (node as any).filter?.((n: any) => n.isSymbolNode) ?? [];
-      syms.forEach((sym: any) => {
-        if (candidateVars.includes(sym.name)) varSet.add(sym.name);
+      const syms = node.filter(
+        (n: MathNode) =>
+          (n as MaybeSymbolNode).isSymbolNode === true,
+      ) as MaybeSymbolNode[];
+
+      syms.forEach((sym) => {
+        const name = sym.name;
+        if (name && (candidateVars as string[]).includes(name)) {
+          varSet.add(name);
+        }
       });
     });
 
@@ -58,46 +106,37 @@ function solveLinearSystem(system: string[]): string {
     const b: number[] = [];
 
     eqNodes.forEach(({ node }) => {
-      const zeroScope: any = {};
+      const zeroScope: Record<string, number> = {};
       vars.forEach((v) => {
         zeroScope[v] = 0;
       });
 
       const row: number[] = [];
       vars.forEach((v) => {
-        const d = math.derivative(node, v as any);
-        const val = d.evaluate(zeroScope);
-        row.push(Number(val));
+        const d = math.derivative(node, v) as MathNode;
+        const valRaw = d.evaluate(zeroScope) as MathType;
+        const valNum =
+          typeof valRaw === 'number' ? valRaw : Number(valRaw as number | string | bigint);
+        row.push(valNum);
       });
 
-      const c = node.evaluate(zeroScope);
+      const cRaw = node.evaluate(zeroScope) as MathType;
+      const cNum =
+        typeof cRaw === 'number' ? cRaw : Number(cRaw as number | string | bigint);
+
       A.push(row);
-      b.push(-Number(c));
+      b.push(-cNum);
     });
 
-    const solMatrix = math.lusolve(A, b) as any;
-    const squeezed = math.squeeze(solMatrix) as any;
-
-    let arr: number[];
-    if (typeof squeezed?.toArray === 'function') {
-      arr = squeezed.toArray();
-    } else if (Array.isArray(squeezed)) {
-      arr = squeezed as number[];
-    } else {
-      arr = [Number(squeezed)];
-    }
+    const solMatrix = math.lusolve(A, b) as Matrix | number[][];
+    const squeezed = math.squeeze(solMatrix) as MathType;
+    const arr = toNumberArray(squeezed);
 
     if (arr.length !== vars.length) {
       return 'Unexpected solution shape from solver.';
     }
 
-    const fmt = (v: number) => {
-      if (!Number.isFinite(v)) return String(v);
-      if (Math.abs(v) < 1e-12) return '0';
-      return Number(v.toFixed(8)).toString();
-    };
-
-    const lines = vars.map((v, i) => `${v} = ${fmt(arr[i])}`);
+    const lines = vars.map((v, i) => `${v} = ${formatNumber(arr[i])}`);
     return lines.join('\n');
   } catch {
     return 'Unable to solve system. Check syntax (e.g. "2x + 3y = 5", "x - y = 1").';
@@ -111,16 +150,25 @@ function solvePolynomial(poly: string): string {
   if (!expr) return 'Enter a polynomial in x (e.g. x^2 + 3x + 2).';
 
   try {
-    const node = math.parse(expr);
+    const node = math.parse(expr) as MathNode;
 
     // coefficients via derivatives at 0:
     // p(0) = c, p'(0) = b, p''(0) = 2a
-    const scope0 = { x: 0 };
-    const p0 = Number(node.evaluate(scope0));
-    const dp = math.derivative(node, 'x' as any);
-    const p1 = Number(dp.evaluate(scope0));
-    const d2p = math.derivative(dp, 'x' as any);
-    const p2 = Number(d2p.evaluate(scope0));
+    const scope0: Record<string, number> = { x: 0 };
+
+    const p0Raw = node.evaluate(scope0) as MathType;
+    const p0 =
+      typeof p0Raw === 'number' ? p0Raw : Number(p0Raw as number | string | bigint);
+
+    const dp = math.derivative(node, 'x') as MathNode;
+    const p1Raw = dp.evaluate(scope0) as MathType;
+    const p1 =
+      typeof p1Raw === 'number' ? p1Raw : Number(p1Raw as number | string | bigint);
+
+    const d2p = math.derivative(dp, 'x') as MathNode;
+    const p2Raw = d2p.evaluate(scope0) as MathType;
+    const p2 =
+      typeof p2Raw === 'number' ? p2Raw : Number(p2Raw as number | string | bigint);
 
     const a = p2 / 2;
     const b = p1;
@@ -130,7 +178,12 @@ function solvePolynomial(poly: string): string {
     const testXs = [-2, -1, 1, 2];
     let maxDiff = 0;
     for (const x of testXs) {
-      const trueVal = Number(node.evaluate({ x }));
+      const trueValRaw = node.evaluate({ x }) as MathType;
+      const trueVal =
+        typeof trueValRaw === 'number'
+          ? trueValRaw
+          : Number(trueValRaw as number | string | bigint);
+
       const quadVal = a * x * x + b * x + c;
       const diff = Math.abs(trueVal - quadVal);
       if (diff > maxDiff) maxDiff = diff;
@@ -139,12 +192,6 @@ function solvePolynomial(poly: string): string {
     if (maxDiff > 1e-6) {
       return 'Polynomial solver currently supports polynomials in x up to degree 2.';
     }
-
-    const fmt = (v: number) => {
-      if (!Number.isFinite(v)) return String(v);
-      if (Math.abs(v) < 1e-12) return '0';
-      return Number(v.toFixed(8)).toString();
-    };
 
     const eps = 1e-12;
 
@@ -158,7 +205,7 @@ function solvePolynomial(poly: string): string {
     if (Math.abs(a) < eps) {
       // linear
       const x = -c / b;
-      return `Linear equation\nx = ${fmt(x)}`;
+      return `Linear equation\nx = ${formatNumber(x)}`;
     }
 
     const D = b * b - 4 * a * c;
@@ -167,20 +214,22 @@ function solvePolynomial(poly: string): string {
       const sqrtD = Math.sqrt(D);
       const x1 = (-b + sqrtD) / (2 * a);
       const x2 = (-b - sqrtD) / (2 * a);
-      return `Two distinct real roots:\n x₁ = ${fmt(x1)}\n x₂ = ${fmt(x2)}`;
+      return `Two distinct real roots:\n x₁ = ${formatNumber(
+        x1,
+      )}\n x₂ = ${formatNumber(x2)}`;
     }
 
     if (Math.abs(D) <= eps) {
       const x0 = -b / (2 * a);
-      return `One real double root:\n x = ${fmt(x0)}`;
+      return `One real double root:\n x = ${formatNumber(x0)}`;
     }
 
     // complex roots
     const sqrtAbsD = Math.sqrt(-D);
     const re = -b / (2 * a);
     const imMag = sqrtAbsD / (2 * Math.abs(a));
-    const reStr = fmt(re);
-    const imStr = fmt(imMag);
+    const reStr = formatNumber(re);
+    const imStr = formatNumber(imMag);
 
     return `Complex roots:\n x₁ = ${reStr} + ${imStr}i\n x₂ = ${reStr} - ${imStr}i`;
   } catch {
@@ -195,13 +244,17 @@ function solveCustom(expr: string): string {
   if (!src) return 'Enter an expression.';
 
   try {
-    const simplified = math.simplify(src);
+    const simplified = math.simplify(src) as MathNode;
     const simpStr = simplified.toString();
 
     let numericStr = '';
     try {
-      const val = simplified.evaluate();
-      if (typeof val !== 'function' && val !== undefined && val !== null) {
+      const val = simplified.evaluate() as MathType;
+      if (
+        typeof val !== 'function' &&
+        val !== undefined &&
+        val !== null
+      ) {
         numericStr = `\n\nNumeric value (with current defaults):\n${val.toString()}`;
       } else {
         numericStr = '\n\nNumeric value depends on variable assignments.';
@@ -249,14 +302,12 @@ export default function EquationsPage() {
     }
   }, [mode, system.length, dispatch]);
 
-  const handleModeClick = (
-    m: (typeof MODES)[number]['id'],
-  ) => {
+  const handleModeClick = (m: (typeof MODES)[number]['id']): void => {
     dispatch(setEquationsMode(m));
     dispatch(setEquationsSolution(null));
   };
 
-  const handleSolve = () => {
+  const handleSolve = (): void => {
     let text: string;
     if (mode === 'linear-system') {
       text = solveLinearSystem(system);
@@ -268,7 +319,7 @@ export default function EquationsPage() {
     dispatch(setEquationsSolution(text));
   };
 
-  const handleClear = () => {
+  const handleClear = (): void => {
     if (mode === 'linear-system') {
       dispatch(setEquationsSystem(['', '']));
     } else if (mode === 'polynomial') {
@@ -291,8 +342,7 @@ export default function EquationsPage() {
               type="button"
               onClick={() => handleModeClick(m.id)}
               className={
-                'mode-chip' +
-                (mode === m.id ? ' mode-chip-active' : '')
+                'mode-chip' + (mode === m.id ? ' mode-chip-active' : '')
               }
             >
               <div className="mode-chip-label">{m.label}</div>
@@ -307,8 +357,8 @@ export default function EquationsPage() {
               <div className="panel-block">
                 <div className="panel-title">Linear system</div>
                 <div className="panel-sub">
-                  One equation per line, using variables x, y, z, t.
-                  Example: 2x + 3y = 5
+                  One equation per line, using variables x, y, z, t. Example:
+                  2x + 3y = 5
                 </div>
                 <textarea
                   className="eq-textarea"
@@ -335,9 +385,7 @@ export default function EquationsPage() {
                   className="eq-input"
                   value={polynomial}
                   onChange={(e) =>
-                    dispatch(
-                      setEquationsPolynomial(e.target.value),
-                    )
+                    dispatch(setEquationsPolynomial(e.target.value))
                   }
                   placeholder="x^2 + 3x + 2"
                 />
@@ -348,8 +396,8 @@ export default function EquationsPage() {
               <div className="panel-block">
                 <div className="panel-title">Custom expression</div>
                 <div className="panel-sub">
-                  Any valid math.js expression. Variables without
-                  values stay symbolic.
+                  Any valid math.js expression. Variables without values stay
+                  symbolic.
                 </div>
                 <textarea
                   className="eq-textarea"
