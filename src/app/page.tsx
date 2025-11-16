@@ -4,16 +4,9 @@
 import Link from 'next/link';
 import Image from 'next/image';
 
-
-const APPS = [
-  'Calculation',
-  'Grapher',
-  'Equations',
-
-];
+const APPS = ['Calculation', 'Grapher', 'Equations'];
 
 export default function Page() {
-
   return (
     <main className="app-shell flex min-h-[100dvh] items-center justify-center bg-[var(--background)] text-[var(--foreground)]">
       <div className="flex min-h-[100dvh] w-full max-w-[1440px] flex-col items-center gap-6 px-4 py-6">
@@ -37,46 +30,47 @@ export default function Page() {
               bg-[rgba(217,217,217,0.5)]
             "
           >
-            <div className="grid h-full w-full grid-cols-3 gap-6 p-8">
-              {APPS.map((name) => {
-                ;
-                return (
-                  <Link
-                    key={name}
-                    href={`/${name}`}
-                    className="
-                      group
-                      mx-auto
-                      flex max-h-full max-w-full flex-col
-                      rounded-[25px]
-                      bg-[#FFFFFF]
-                      shadow-[0_4px_12px_rgba(0,0,0,0.08)]
-                      transition-transform
-                      hover:-translate-y-1
-                      active:scale-[0.97]
-                      overflow-hidden
-                    "
-                  >
-                    {/* Image block */}
-                    <div className="relative h-[170px] w-[170px] overflow-hidden bg-[#f7f0f6] rounded-[25px] shadow-[0_6px_14px_rgba(0,0,0,0.16)]">
-                      <Image
-                        src={`/${name}.png`} // put your files in public/apps/<id>.png
-                        alt={name}
-                        fill
-                        className="object-cover"
-                        sizes="170px"
-                      />
-                    </div>
+            <div className="grid h-full w-full grid-cols-1 gap-6 p-6 sm:grid-cols-2 lg:grid-cols-3">
+              {APPS.map((name) => (
+                <Link
+                  key={name}
+                  href={`/${name}`}
+                  className="
+                    group
+                    mx-auto
+                    flex
+                    w-full
+                    max-w-[170px]
+                    flex-col
+                    items-center
+                    rounded-[25px]
+                    bg-[#FFFFFF]
+                    shadow-[0_4px_12px_rgba(0,0,0,0.08)]
+                    transition-transform
+                    hover:-translate-y-1
+                    active:scale-[0.97]
+                    overflow-hidden
+                  "
+                >
+                  {/* Image block */}
+                  <div className="relative h-[170px] w-[170px] overflow-hidden rounded-[25px] bg-[#f7f0f6] shadow-[0_6px_14px_rgba(0,0,0,0.16)]">
+                    <Image
+                      src={`/${name}.png`}
+                      alt={name}
+                      fill
+                      className="object-cover"
+                      sizes="170px"
+                    />
+                  </div>
 
-                    {/* Title at bottom */}
-                    <div className="px-3 py-1 text-center">
-                      <span className="block text-[20px] font-semibold tracking-tight text-[#333] group-hover:text-[#FF69B4]">
-                        {name}
-                      </span>
-                    </div>
-                  </Link>
-                );
-              })}
+                  {/* Title at bottom */}
+                  <div className="px-3 py-1 text-center">
+                    <span className="block text-[20px] font-semibold tracking-tight text-[#333] group-hover:text-[#FF69B4]">
+                      {name}
+                    </span>
+                  </div>
+                </Link>
+              ))}
             </div>
           </div>
         </div>
