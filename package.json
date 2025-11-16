@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "@reduxjs/toolkit": "^2.10.1",
+    "math": "^0.0.3",
+    "mathjs": "^15.1.0",
     "next": "15.5.6",
     "react": "19.1.0",
     "react-dom": "19.1.0",

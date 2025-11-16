@@ -4,26 +4,15 @@
 import Link from 'next/link';
 import Image from 'next/image';
 
-import { useRef } from 'react';
-
 
 const APPS = [
   'Calculation',
   'Grapher',
   'Equations',
-  'Statistics',
-  'Regression',
-  'Sequences',
-  'Distributions',
-  'Inference',
-  'Finance',
-  'Elements',
-  'Python',
-  'Settings',
+
 ];
 
 export default function Page() {
-  const scrollRef = useRef<HTMLDivElement | null>(null);
 
   return (
     <main className="app-shell flex min-h-[100dvh] items-center justify-center bg-[var(--background)] text-[var(--foreground)]">
@@ -39,15 +28,13 @@ export default function Page() {
         <div className="flex w-full max-w-[1000px] flex-1 items-center gap-3">
           {/* Scrollable light gray container */}
           <div
-            ref={scrollRef}
             className="
               relative
-              h-full min-h-[320px] max-h-[70vh]
+              h-full 
               w-full
               overflow-y-auto
               rounded-[40px]
               bg-[rgba(217,217,217,0.5)]
-              no-scrollbar
             "
           >
             <div className="grid h-full w-full grid-cols-3 gap-6 p-8">
