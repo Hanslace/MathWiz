@@ -77,7 +77,7 @@ export default function Page() {
 
         {/* Footer / trademark */}
         <div className="text-[11px] font-medium tracking-tight text-[rgba(0,0,0,0.55)]">
-          © 2025 — All rights belong to the dumbasses.
+          © 2025 — All rights belong to the cool devs.
         </div>
       </div>
     </main>
